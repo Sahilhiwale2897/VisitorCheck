@@ -1,62 +1,112 @@
-function login() {
-    const username = document.getElementById("username").value;
-    const password = document.getElementById("password").value;
-    if (username === "security" && password === "Security") {
-        document.getElementById("login-page").style.display = "none";
-        document.getElementById("dashboard").style.display = "block";
-    } else {
-        alert("Invalid Credentials!");
+document.addEventListener("DOMContentLoaded", function () {
+    const loginPage = document.getElementById("login-page");
+    const dashboard = document.getElementById("dashboard");
+    const visitorLog = document.getElementById("visitor-log");
+
+    // ✅ Check if user is already logged in
+    if (localStorage.getItem("loggedIn") === "true") {
+        loginPage.style.display = "none";
+        dashboard.style.display = "block";
     }
-}
 
-function checkInVisitor() {
-    const name = document.getElementById("Visitor-name").value;
-    const address = document.getElementById("Visitor-address").value;
-    const phone = document.getElementById("Visitor-phone").value;
-    const email = document.getElementById("Visitor-email").value;
-    
-    const now = new Date();
-    const checkInDate = now.toLocaleDateString();
-    const checkInTime = now.toLocaleTimeString();
+    // ✅ Restore visitors from localStorage
+    let visitors = JSON.parse(localStorage.getItem("visitors")) || [];
+    displayVisitors();
 
-    if (name && address && phone && email) {
-        const table = document.getElementById("visitor-log");
-        const row = table.insertRow();
-        row.innerHTML = `
-            <td>${name}</td>
-            <td>${address}</td>
-            <td>${phone}</td>
-            <td>${email}</td>
-            <td>${checkInDate}</td>
-            <td>${checkInTime}</td>
-            <td id="checkout-date-${phone}">-</td>
-            <td id="checkout-time-${phone}">-</td>
-            <td><button id="checkout-btn-${phone}" onclick="checkOutVisitor('${phone}')">Check-Out</button></td>
-        `;
+    // Login Function
+    window.login = function () {
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        if (username === "security" && password === "Security") {
+            localStorage.setItem("loggedIn", "true"); // ✅ Store login state
+            loginPage.style.display = "none";
+            dashboard.style.display = "block";
+        } else {
+            alert("Invalid Credentials!");
+        }
+    };
 
-        document.getElementById("Visitor-name").value = "";
-        document.getElementById("Visitor-address").value = "";
-        document.getElementById("Visitor-phone").value = "";
-        document.getElementById("Visitor-email").value = "";
-    } else {
-        alert("Please fill all details");
-    }
-}
+    // Check-In Visitor
+    window.checkInVisitor = function () {
+        const name = document.getElementById("Visitor-name").value;
+        const address = document.getElementById("Visitor-address").value;
+        const phone = document.getElementById("Visitor-phone").value;
+        const email = document.getElementById("Visitor-email").value;
 
-function checkOutVisitor(phone) {
-    const checkoutDateCell = document.getElementById(`checkout-date-${phone}`);
-    const checkoutTimeCell = document.getElementById(`checkout-time-${phone}`);
-    const checkoutBtn = document.getElementById(`checkout-btn-${phone}`);
-
-    if (checkoutDateCell.innerText === "-") {
         const now = new Date();
-        checkoutDateCell.innerText = now.toLocaleDateString();
-        checkoutTimeCell.innerText = now.toLocaleTimeString();
+        const checkInDate = now.toLocaleDateString();
+        const checkInTime = now.toLocaleTimeString();
 
-        // Disable the checkout button after use
-        checkoutBtn.innerText = "Checked Out";
-        checkoutBtn.disabled = true;
-    } else {
-        alert("Visitor has already checked out!");
+        if (name && address && phone && email) {
+            const visitor = {
+                name,
+                address,
+                phone,
+                email,
+                checkInDate,
+                checkInTime,
+                checkOutDate: "-",
+                checkOutTime: "-",
+            };
+
+            visitors.push(visitor);
+            localStorage.setItem("visitors", JSON.stringify(visitors)); // ✅ Save visitors
+            displayVisitors();
+
+            // Clear input fields
+            document.getElementById("Visitor-name").value = "";
+            document.getElementById("Visitor-address").value = "";
+            document.getElementById("Visitor-phone").value = "";
+            document.getElementById("Visitor-email").value = "";
+        } else {
+            alert("Please fill all details");
+        }
+    };
+
+    // Check-Out Visitor
+    window.checkOutVisitor = function (phone) {
+        visitors = visitors.map(visitor => {
+            if (visitor.phone === phone && visitor.checkOutDate === "-") {
+                const now = new Date();
+                visitor.checkOutDate = now.toLocaleDateString();
+                visitor.checkOutTime = now.toLocaleTimeString();
+            }
+            return visitor;
+        });
+
+        localStorage.setItem("visitors", JSON.stringify(visitors)); // ✅ Save check-out info
+        displayVisitors();
+    };
+
+    // Display Visitors in Table
+    function displayVisitors() {
+        visitorLog.innerHTML = ""; // Clear table
+        visitors.forEach((visitor) => {
+            const row = visitorLog.insertRow();
+            row.innerHTML = `
+                <td>${visitor.name}</td>
+                <td>${visitor.address}</td>
+                <td>${visitor.phone}</td>
+                <td>${visitor.email}</td>
+                <td>${visitor.checkInDate}</td>
+                <td>${visitor.checkInTime}</td>
+                <td>${visitor.checkOutDate}</td>
+                <td>${visitor.checkOutTime}</td>
+                <td>
+                    <button id="checkout-btn-${visitor.phone}" 
+                        onclick="checkOutVisitor('${visitor.phone}')" 
+                        ${visitor.checkOutDate !== "-" ? "disabled" : ""}>
+                        ${visitor.checkOutDate === "-" ? "Check-Out" : "Checked Out"}
+                    </button>
+                </td>
+            `;
+        });
     }
-}
+
+    // ✅ Logout Function (Clears login state)
+    window.logout = function () {
+        localStorage.removeItem("loggedIn");
+        loginPage.style.display = "block";
+        dashboard.style.display = "none";
+    };
+});
